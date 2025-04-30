@@ -57,7 +57,7 @@ Using all bands seems to perform better on validation, but worse on test. The im
 The results are still close enough that it's better to continue with false color images, as it's easier to adapt to DINOv2.
   
 Some prediction masks:  
-![predictions](imgs/predictions.png)
+![predictions](img/predictions.png)
 
 # DINOv2
 

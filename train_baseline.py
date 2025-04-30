@@ -22,13 +22,10 @@ class SegmentationDataset(Dataset):
         self.img_dir = img_dir
         self.mask_dir = mask_dir
         self.transform = transform
-        # Load your dataset here
-
         self.images_names = os.listdir(img_dir)
         self.images_names = [name for name in self.images_names if name.endswith(('.tif', '.tiff'))]
 
     def __len__(self):
-        # Return the number of samples in your dataset
         return len(self.images_names)
 
     def __getitem__(self, idx):
@@ -38,7 +35,6 @@ class SegmentationDataset(Dataset):
 
         #image = Image.open(image_path).convert("RGB")
         image = tifffile.imread(image_path)
-        #print(image.shape)
         if os.path.exists(mask_path):
             mask = np.load(mask_path)
         else:
@@ -98,7 +94,6 @@ test_dataloader = DataLoader(
 )
 
 weights = ResNet50_Weights.SENTINEL2_ALL_MOCO if channels == 13 else ResNet50_Weights.SENTINEL2_RGB_MOCO
-#weights = ResNet18_Weights.SENTINEL2_RGB_MOCO
 
 task = SemanticSegmentationTask(
     model="unet",
@@ -120,58 +115,59 @@ trainer = Trainer(
     #enable_checkpointing=True,
 )
 
+# Test the model before training (to see that it really is random)
 trainer.test(
     task,
     dataloaders=test_dataloader,
 )
     
+# Train the model
 trainer.fit(
     task,
     train_dataloader,
     val_dataloader,
 )
+    
+# Test the model after training
 trainer.test(
     dataloaders=test_dataloader,
 )
 
 import matplotlib.pyplot as plt
 
-trainer.model.eval()  # Set the model to evaluation mode
+trainer.model.eval()
 
-# Get a batch of data from the validation dataloader
+# Visualize some predictions
+
 data_iter = iter(val_dataloader)
 batch = next(data_iter)
 images = batch["image"]
 masks = batch["mask"]
 
-# Pass the images through the trained model to get predictions
 with torch.no_grad():
     logits = trainer.model(images)
-    preds = torch.sigmoid(logits) > 0.5  # Binarize predictions for binary segmentation
+    preds = torch.sigmoid(logits) > 0.5
 
-# For visualization, we will plot images, masks, and predictions for a few samples
-num_samples = 4  # Number of samples to display
+num_samples = 4
 
 fig, axes = plt.subplots(num_samples, 3, figsize=(12, 12))
 
 for i in range(num_samples):
-    # Convert the tensors to numpy arrays for plotting
-    img = images[i].cpu().numpy().transpose(1, 2, 0)  # Convert to HWC format for display
-    mask = masks[i].cpu().numpy()  # Ground truth mask
-    pred = preds[i].cpu().numpy()  # Predicted mask
+    img = images[i].cpu().numpy().transpose(1, 2, 0)
+    mask = masks[i].cpu().numpy()
+    pred = preds[i].cpu().numpy()
 
-    # Plot the image, ground truth mask, and prediction
-    img = img[..., 1:4] if channels == 13 else img  # Take only the first 3 channels for RGB
+    img = img[..., 1:4] if channels == 13 else img
     axes[i, 0].imshow(img)
     axes[i, 0].set_title(f"Image {i+1}")
     axes[i, 0].axis('off')
 
-    mask = np.squeeze(mask)  # Remove channel dimension if present
+    mask = np.squeeze(mask)
     axes[i, 1].imshow(mask, cmap='gray')
     axes[i, 1].set_title(f"Ground Truth {i+1}")
     axes[i, 1].axis('off')
 
-    pred = np.squeeze(pred)  # Remove channel dimension if present
+    pred = np.squeeze(pred)
     axes[i, 2].imshow(pred, cmap='gray')
     axes[i, 2].set_title(f"Prediction {i+1}")
     axes[i, 2].axis('off')

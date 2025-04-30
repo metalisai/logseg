@@ -50,6 +50,8 @@ The most important metric here is BinaryJaccardIndex(IoU). Training IoU reached 
 
 Average IoU with all bands on test data was 0.55 and on validation data 0.59.
 Average IoU with with false color on test data was 0.61 and on validation data 0.53.
+
+## Results
   
 **The IoU on unseen data generally seems to be around 0.55-0.60.**  
   

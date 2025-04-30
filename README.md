@@ -2,6 +2,13 @@
 
 118 images were labeled with binary segmentation masks. The images are 128x128 pixels. The data was split into train (80%), validation (10%) and test (10%).  
 The data labeling was done in CVAT using the true color images.
+  
+The images were fetched from Sentinel-2 using the SentinelHub API.  
+False color images use (Band 8, Band 4, Band 3) as RGB.  
+True color images use (Band 2, Band 3, Band 4) as RGB.  
+All band images use all 13 bands.
+  
+The images are cut forests in Viljandi county, Estonia. The regions with cut forests were found using "Metsaregister" (Forest Register). All images are from 2020+, usually in May.  
 
 # Baseline
 

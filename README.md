@@ -70,4 +70,37 @@ Some prediction masks:
 
 # DINOv2
 
-TODO
+A simple linear layer with bilinear interpolation on top of DINOv2 patch tokens seemed to perform best. Using more linear layers or convTranspose for upsampling did not improve the results.  
+
+dinov2\_vits14  
+**IoU on test data was usually around 0.45. On validation data best was usually around 0.55.**  
+dinov2\_vitl14  
+**IoU on test data was usually around 0.50. On validation data best was usually around 0.47.**  
+  
+```python
+class MySegmentationModel(torch.nn.Module):
+    def __init__(self, dinov2_model):
+        super(MySegmentationModel, self).__init__()
+        self.dinov2_model = dinov2_model
+        self.linear1 = torch.nn.Conv2d(
+            in_channels=dinov2_model.embed_dim,
+            out_channels=1,
+            kernel_size=1
+        )
+
+    def forward(self, x):
+        features = self.dinov2_model.forward_features(x)
+        B, P, C = features["x_norm_patchtokens"].shape
+        S = int(P**0.5)
+        x = features["x_norm_patchtokens"].reshape(B, S, S, C)
+        x = x.permute(0, 3, 1, 2)
+        x = self.linear1(x)
+        x = F.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
+        return x
+```
+
+
+![predictions](img/predictions_dino.png)
+  
+## More things to try
+Combine U-NET and DINOv2 patch tokens.

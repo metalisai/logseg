@@ -1,0 +1,11 @@
+images_allbands filter=lfs diff=lfs merge=lfs -text
+images_allbands/*.tiff filter=lfs diff=lfs merge=lfs -text
+images_truecolor/*.tiff filter=lfs diff=lfs merge=lfs -text
+images_falsecolor/*.tiff filter=lfs diff=lfs merge=lfs -text
+images_falsecolor_224/*.tiff filter=lfs diff=lfs merge=lfs -text
+masks/*.npy filter=lfs diff=lfs merge=lfs -text
+masks224/*.npy filter=lfs diff=lfs merge=lfs -text
+img/predictions.png filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.npy filter=lfs diff=lfs merge=lfs -text

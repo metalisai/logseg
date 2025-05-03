@@ -21,8 +21,6 @@ transform = v2.Compose([
     v2.RandomHorizontalFlip(p=0.5),
     v2.RandomVerticalFlip(p=0.5),
     v2.RandomRotation(180),
-    #v2.RandomCrop(size=(128, 128)),
-    #v2.RandomResizedCrop(size=(128, 128), scale=(0.8, 1.0)),
 ])
 
 train_img_dir = os.path.join(img_dir, "train")
@@ -32,24 +30,24 @@ val_mask_dir = os.path.join(mask_dir, "valid")
 test_img_dir = os.path.join(img_dir, "test")
 test_mask_dir = os.path.join(mask_dir, "test")
 
+# Create datasets
 train_dataset = SegmentationDataset(train_img_dir, train_mask_dir, transform=transform)
 val_dataset = SegmentationDataset(val_img_dir, val_mask_dir, transform=None)
 test_dataset = SegmentationDataset(test_img_dir, test_mask_dir, transform=None)
 
+# Create data loaders
 train_dataloader = DataLoader(
     train_dataset,
     batch_size=4,
     shuffle=True,
     num_workers=4,
 )
-
 val_dataloader = DataLoader(
     val_dataset,
     batch_size=4,
     shuffle=False,
     num_workers=4,
 )
-
 test_dataloader = DataLoader(
     test_dataset,
     batch_size=4,
@@ -57,8 +55,10 @@ test_dataloader = DataLoader(
     num_workers=4,
 )
 
+# Use ResNet50 as the backbone
 weights = ResNet50_Weights.SENTINEL2_ALL_MOCO if channels == 13 else ResNet50_Weights.SENTINEL2_RGB_MOCO
 
+# Create the model
 task = SemanticSegmentationTask(
     model="unet",
     backbone="resnet50",
@@ -68,6 +68,7 @@ task = SemanticSegmentationTask(
     loss="bce",
 )
 
+# Log to TensorBoard
 logger = TensorBoardLogger("runs", name=name)
 trainer = Trainer(
     max_epochs=40,

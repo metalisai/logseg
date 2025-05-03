@@ -10,6 +10,8 @@ import numpy as np
 img_dir = "./images_falsecolor_224"
 mask_dir = "./masks224"
 
+model_dtype = torch.bfloat16
+
 train_img_dir = os.path.join(img_dir, "train")
 train_mask_dir = os.path.join(mask_dir, "train")
 val_img_dir = os.path.join(img_dir, "valid")
@@ -51,11 +53,12 @@ test_dataloader = DataLoader(
 )
 
 #print(dinov2)
-dinov2 = dinov2.to(device="cuda")
+dinov2 = dinov2.to(device="cuda", dtype=model_dtype)
+dinov2.eval()
 
 data_iter = iter(val_dataloader)
 batch = next(data_iter)
-images = batch["image"].to(device="cuda")
+images = batch["image"].to(device="cuda", dtype=model_dtype)
 
 result = dinov2(images)
 print(result.shape)
@@ -71,6 +74,11 @@ class MySegmentationModel(torch.nn.Module):
         self.dinov2_model = dinov2_model
         self.linear1 = torch.nn.Conv2d(
             in_channels=dinov2_model.embed_dim,
+            out_channels=196,
+            kernel_size=1
+        )
+        self.linear2 = torch.nn.Conv2d(
+            in_channels=196,
             out_channels=1,
             kernel_size=1
         )
@@ -82,15 +90,17 @@ class MySegmentationModel(torch.nn.Module):
         x = features["x_norm_patchtokens"].reshape(B, S, S, C)
         x = x.permute(0, 3, 1, 2)
         x = self.linear1(x)
+        x = F.silu(x)
         x = F.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
+        x = self.linear2(x)
         return x
 
 myModel = MySegmentationModel(dinov2)
-myModel = myModel.to(device="cuda")
+myModel = myModel.to(device="cuda", dtype=model_dtype)
 outputs = myModel(images)
 print(f"Out {outputs.shape}")
 
-num_epochs = 40
+num_epochs = 20
 optimizer = torch.optim.Adam(myModel.parameters(), lr=5e-5)
 criterion = torch.nn.BCEWithLogitsLoss()
 
@@ -109,8 +119,8 @@ def compute_iou(preds, masks, threshold=0.5, eps=1e-6):
 for epoch in range(num_epochs):
     myModel.train()
     for batch in train_dataloader:
-        images = batch["image"].to(device="cuda")
-        masks = batch["mask"].to(device="cuda").float().unsqueeze(1)
+        images = batch["image"].to(device="cuda", dtype=model_dtype)
+        masks = batch["mask"].float().to(device="cuda", dtype=model_dtype).unsqueeze(1)
 
         optimizer.zero_grad()
         outputs = myModel(images)
@@ -123,8 +133,8 @@ for epoch in range(num_epochs):
     iou = 0.0
     with torch.no_grad():
         for batch in val_dataloader:
-            images = batch["image"].to(device="cuda")
-            masks = batch["mask"].to(device="cuda").float().unsqueeze(1)
+            images = batch["image"].to(device="cuda", dtype=model_dtype)
+            masks = batch["mask"].float().to(device="cuda", dtype=model_dtype).unsqueeze(1)
 
             outputs = myModel(images)
             iou += compute_iou(outputs, masks)
@@ -136,8 +146,8 @@ myModel.eval()
 iou = 0.0
 with torch.no_grad():
     for batch in test_dataloader:
-        images = batch["image"].to(device="cuda")
-        masks = batch["mask"].to(device="cuda").float().unsqueeze(1)
+        images = batch["image"].to(device="cuda", dtype=model_dtype)
+        masks = batch["mask"].float().to(device="cuda", dtype=model_dtype).unsqueeze(1)
 
         outputs = myModel(images)
         iou += compute_iou(outputs, masks)
@@ -148,7 +158,7 @@ with torch.no_grad():
 
 data_iter = iter(val_dataloader)
 batch = next(data_iter)
-images = batch["image"].to(device="cuda")
+images = batch["image"].to(device="cuda", dtype=model_dtype)
 masks = batch["mask"]
 
 with torch.no_grad():
@@ -160,9 +170,9 @@ num_samples = 4
 fig, axes = plt.subplots(num_samples, 3, figsize=(12, 12))
 
 for i in range(num_samples):
-    img = images[i].cpu().numpy().transpose(1, 2, 0)
-    mask = masks[i].cpu().numpy()
-    pred = preds[i].cpu().numpy()
+    img = images[i].float().cpu().numpy().transpose(1, 2, 0)
+    mask = masks[i].float().cpu().numpy()
+    pred = preds[i].float().cpu().numpy()
 
     #img = img[..., 1:4] if channels == 13 else img
     axes[i, 0].imshow(img)

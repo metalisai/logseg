@@ -1,3 +1,11 @@
+# Files
+
+Report - report.pdf  
+Baseline training code - train\_baseline.py  
+DINOv2 training code - train\_dinov2.py  
+Training images - images_[allbands|falsecolor|truecolor]  
+Training masks - masks  
+
 # Data
 
 118 images were labeled with binary segmentation masks. The images are 128x128 pixels. The data was split into train (80%), validation (10%) and test (10%).  
